@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Search Table</title>
+    <style>
+        #search { margin-bottom: 10px; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <input type="text" id="search" placeholder="Type to search...">
+    <p class="error" id="error"></p>
+    <table border="2" cellpadding="15" cellspacing="10">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+            </tr>
+        </thead>
+        <tbody id="res">
+        </tbody>
+    </table>
+
+    <script>
+        let allResults = []; 
+        const searchElement = document.getElementById("search");
+        const errorElement = document.getElementById("error");
+        const resElement = document.getElementById("res");
+        let debounceTimeout;
+
+        searchElement.addEventListener("input", function () {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(showText, 1000);
+        });
+
+        function showText() {
+            const txtSearch = searchElement.value.trim();
+
+            if (txtSearch === "") {
+                return; 
+            }
+
+            const xhr = new XMLHttpRequest();
+            xhr.open("GET", "data.xml"); 
+            xhr.onreadystatechange = function () {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const data = xhr.responseXML;
+                            const ids = data.getElementsByTagName("id");
+                            const firstNames = data.getElementsByTagName("firstname");
+                            const lastNames = data.getElementsByTagName("lastname");
+
+                            const currentResults = [];
+
+                            for (let i = 0; i < ids.length; i++) {
+                                const id = ids[i].textContent;
+                                const firstName = firstNames[i].textContent;
+                                const lastName = lastNames[i].textContent;
+
+                                if (
+                                    id.includes(txtSearch) ||
+                                    firstName.includes(txtSearch) ||
+                                    lastName.includes(txtSearch)
+                                ) {
+                                    currentResults.push({ id, firstName, lastName });
+                                }
+                            }
+
+                            allResults = [...allResults, ...currentResults]; 
+
+                            allResults.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+
+                            let resultHTML = "";
+
+                            allResults.forEach((result) => {
+                                resultHTML += "<tr>";
+                                resultHTML += `<td>${result.id}</td>`;
+                                resultHTML += `<td>${result.firstName}</td>`;
+                                resultHTML += `<td>${result.lastName}</td>`;
+                                resultHTML += "</tr>";
+                            });
+
+                            resElement.innerHTML = resultHTML;
+                            errorElement.textContent = "";
+                        } catch (e) {
+                            errorElement.textContent = "Error parsing data. Please try again later.";
+                        }
+                    } else {
+                        errorElement.textContent = `Error fetching data: ${xhr.statusText}`;
+                    }
+                }
+            };
+
+            xhr.send();
+            searchElement.value = "";
+        }
+    </script>
+</body>
+</html>
